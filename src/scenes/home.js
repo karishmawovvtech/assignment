@@ -8,6 +8,7 @@ export default class Home extends Component{
         super();
         this.state={
             hitList:[],
+            list:[],
             pageCount:0,
             loading:false,
             searchText:''
@@ -30,7 +31,7 @@ export default class Home extends Component{
         .then((json) => {
             let oldList=this.state.hitList;
             let newList=json.hits;
-            this.setState({hitList:[...oldList, ...newList], pageCount:this.state.pageCount+1});
+            this.setState({hitList:[...oldList, ...newList], list:[...oldList, ...newList], pageCount:this.state.pageCount+1});
             if(this.state.hitList.length > 0){
                 this.setState({loading:false})
             }
@@ -40,13 +41,13 @@ export default class Home extends Component{
         });
         
     }
-    navigate=()=>{
-        this.props.navigation.navigate('jsonDetails')
+    navigate=(json)=>{
+        this.props.navigation.navigate('jsonDetails',{json})
     }
     renderListItem=({item})=>{
         return(
             <Card>
-                <CardItem button onPress={this.navigate}>
+                <CardItem button onPress={()=>this.navigate(item)}>
                     <Body>
                         <Text>{item.title}</Text>
                         <Text note>{item.author}</Text>
@@ -57,15 +58,57 @@ export default class Home extends Component{
             </Card>
         );
     }
+    search=()=>{
+        if(this.state.searchText!=''){
+            var tempArray=[];
+            var list= this.state.list;
+            filteredData = [...list];
+            filteredData = filteredData.filter((item) => {
+                if ( item.url && item.url.toLowerCase().includes(this.state.searchText.toLowerCase()) ) {
+                    return true;
+                } else if ( item.author && item.author.toLowerCase().includes(this.state.searchText.toLowerCase()) ) {
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+            this.setState({hitList:filteredData})
+        }else{
+
+        }
+    }
+    filterByTitle=()=>{
+        filteredData = [...this.state.list];
+        filteredData = filteredData.sort(function (a, b) {
+            if (a.title < b.title) {
+                return -1;
+            }
+            if (a.title > b.title) {
+            return 1;
+            }
+            return 0;
+        });
+        console.log(filteredData.length);
+        this.setState({hitList:filteredData})
+    }
+    filterByCreatedAt=()=>{
+        filteredData = [...this.state.list];
+        filteredData = filteredData.sort(function (a, b) {
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+        this.setState({hitList:filteredData})
+    }
     header=()=>{
         return(
             <View>
                 {this.state.loading?<ActivityIndicator size='large' animating={this.state.loading} color='blue'/>:null}
                 {!this.state.loading?
-                    <View style={{flexDirection:'row'}}>
-                        <Input placeholder="Search here" onSubmitEditing={()=>alert('hello')} onChangeText={value=>this.setState({searchText:value})} />
-
-                        <Button small rounded bordered style={{alignSelf:'flex-end'}} onPress={()=>{
+                    <View style={{flexDirection:'row',justifyContent:'center'}}>
+                        <Input placeholder="Search here"  onChangeText={value=>this.setState({searchText:value})} />
+                        <Button small rounded onPress={this.search} >
+                            <Text>SEARCH</Text>
+                        </Button>    
+                        <Button small rounded bordered  onPress={()=>{
                             ActionSheet.show(
                                 {
                                     options: BUTTONS,
@@ -75,16 +118,16 @@ export default class Home extends Component{
                                 buttonIndex => {
                                     // this.setState({ clicked: BUTTONS[buttonIndex] });
                                     if(buttonIndex==0){
-                                        filterByTitle();
+                                        this.filterByTitle();
                                     }
                                     if(buttonIndex==1){
-                                        filterByCreatedAt();
+                                        this.filterByCreatedAt();
                                     }
                                 }
                                 )
                         }}>
                             {/* <Text>Filter</Text> */}
-                            <Icon name='arrow-back' />
+                            <Icon type="FontAwesome" name="filter" />
                         </Button>
                     </View>
                 :null}
@@ -97,7 +140,7 @@ export default class Home extends Component{
             ListHeaderComponent={this.header}
             data={this.state.hitList}
             renderItem={this.renderListItem}
-            keyExtractor={index =>index.toString()}
+            keyExtractor={(item, index) =>index.toString()}
             // onEndReached={this.loadMore}
             // onEndReachedThreshold={0.5}
             />
